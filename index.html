@@ -9,7 +9,7 @@
     <title>Document</title>
   </head>
   <body>
-    <div id="my_dataviz"></div>
+    <div id="heatmap"></div>
     <script>
       // set the dimensions and margins of the graph
       const margin = { top: 100, right: 25, bottom: 30, left: 100 },
@@ -18,7 +18,7 @@
 
       // append the svg object to the body of the page
       const svg = d3
-        .select("#my_dataviz")
+        .select("#heatmap")
         .append("svg")
         .attr("width", width + margin.left + margin.right)
         .attr("height", height + margin.top + margin.bottom)
@@ -58,15 +58,14 @@
         setSensorData();
         let currentValue;
         let sensorArr = [];
-        for (let i = 0; i < 6; i++) {
+        //수직방향으로 값 계산하기
+        function setVerticalValue(i) {
           for (let j = 0; j < 7; j++) {
             if (graph[i][j] !== 0 && !currentValue) {
               currentValue = graph[i][j];
             } else if (graph[i][j] !== 0 && currentValue) {
               average = Math.round((graph[i][j] - currentValue) * 10) / 10;
-              console.log(average, i, j);
               let difference = (average * 10) / (sensorArr.length + 1) / 10;
-              console.log(sensorArr[0]);
               for (let i = 0; i < sensorArr.length; i++) {
                 graph[sensorArr[i].i][sensorArr[i].j] =
                   Math.round((currentValue + difference * (i + 1)) * 10) / 10;
@@ -78,22 +77,64 @@
             }
           }
         }
+        //수평방향으로 값 계산하기
+        function setHorizontalValue(j) {
+          for (let i = 0; i < 6; i++) {
+            if (graph[i][j] !== 0 && !currentValue) {
+              currentValue = graph[i][j];
+            } else if (graph[i][j] !== 0 && currentValue) {
+              average = Math.round((graph[i][j] - currentValue) * 10) / 10;
+              let difference = (average * 10) / (sensorArr.length + 1) / 10;
+              for (let i = 0; i < sensorArr.length; i++) {
+                graph[sensorArr[i].i][sensorArr[i].j] =
+                  Math.round((currentValue + difference * (i + 1)) * 10) / 10;
+              }
+              currentValue = graph[i][j];
+              sensorArr = [];
+            } else if (graph[i][j] === 0) {
+              sensorArr.push({ i, j });
+            }
+          }
+        }
+        // 테두리 값이 나오면 그걸로 전체 값 게산
+
+        function setEntireValue() {
+          for (let i = 0; i < 6; i++) {
+            for (let j = 0; j < 7; j++) {
+              if (graph[i][j] !== 0 && !currentValue) {
+                currentValue = graph[i][j];
+              } else if (graph[i][j] !== 0 && currentValue) {
+                average = Math.round((graph[i][j] - currentValue) * 10) / 10;
+                let difference = (average * 10) / (sensorArr.length + 1) / 10;
+                for (let i = 0; i < sensorArr.length; i++) {
+                  graph[sensorArr[i].i][sensorArr[i].j] =
+                    Math.round((currentValue + difference * (i + 1)) * 10) / 10;
+                }
+                currentValue = graph[i][j];
+                sensorArr = [];
+              } else if (graph[i][j] === 0) {
+                sensorArr.push({ i, j });
+              }
+            }
+          }
+        }
+        //센서가 설치된 곳을 선택해서 계산
+        setVerticalValue(0);
+        setVerticalValue(5);
+        setHorizontalValue(0);
+        setHorizontalValue(6);
+        //그냥 entirevalue만 실행해도 값은 나오지만 정확도 높지 않음
+        setEntireValue();
 
         let newArr = [];
         for (const a of graph) {
           newArr.push(...a);
         }
-        console.log("data", data);
         for (let i = 0; i < 42; i++) {
           data[i].value = newArr[i];
         }
+        console.log(graph);
         console.log(data);
-
-        // for (let i = 0; i < 42; i++) {
-        //   newData = Array.from(data).map((d) => ({ ...d, value: newArr[i] }));
-        // }
-        // data = { ...data, value: newData };
-        // console.log("data", data);
 
         // Build X scales and axis:
         const x = d3
@@ -130,7 +171,7 @@
 
         // create a tooltip
         const tooltip = d3
-          .select("#my_dataviz")
+          .select("#heatmap")
           .append("div")
           .style("opacity", 0)
           .attr("class", "tooltip")
