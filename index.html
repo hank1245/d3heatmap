@@ -30,6 +30,70 @@
       d3.csv("./data.csv").then(function (data) {
         const myGroups = Array.from(new Set(data.map((d) => d.group)));
         const myVars = Array.from(new Set(data.map((d) => d.variable)));
+        const maxVal = Math.max(
+          ...Array.from(data)
+            .filter((d) => d.value !== "")
+            .map((d) => Number(d.value))
+        );
+        const minVal = Math.min(
+          ...Array.from(data)
+            .filter((d) => d.value !== "")
+            .map((d) => Number(d.value))
+        );
+
+        let graph = [];
+        function setSensorData(heatArr) {
+          for (let i = 0; i < 42; i += 7) {
+            let newArr = Array.from(data).slice(i, i + 7);
+            let arrData = newArr.map((d) => {
+              if (d.value === "") {
+                return 0;
+              }
+              return Number(d.value);
+            });
+            graph.push(arrData);
+          }
+        }
+        // 데이터의 value값만 담긴 2차원 배열 graph
+        setSensorData();
+        let currentValue;
+        let sensorArr = [];
+        for (let i = 0; i < 6; i++) {
+          for (let j = 0; j < 7; j++) {
+            if (graph[i][j] !== 0 && !currentValue) {
+              currentValue = graph[i][j];
+            } else if (graph[i][j] !== 0 && currentValue) {
+              average = Math.round((graph[i][j] - currentValue) * 10) / 10;
+              console.log(average, i, j);
+              let difference = (average * 10) / (sensorArr.length + 1) / 10;
+              console.log(sensorArr[0]);
+              for (let i = 0; i < sensorArr.length; i++) {
+                graph[sensorArr[i].i][sensorArr[i].j] =
+                  Math.round((currentValue + difference * (i + 1)) * 10) / 10;
+              }
+              currentValue = graph[i][j];
+              sensorArr = [];
+            } else if (graph[i][j] === 0) {
+              sensorArr.push({ i, j });
+            }
+          }
+        }
+
+        let newArr = [];
+        for (const a of graph) {
+          newArr.push(...a);
+        }
+        console.log("data", data);
+        for (let i = 0; i < 42; i++) {
+          data[i].value = newArr[i];
+        }
+        console.log(data);
+
+        // for (let i = 0; i < 42; i++) {
+        //   newData = Array.from(data).map((d) => ({ ...d, value: newArr[i] }));
+        // }
+        // data = { ...data, value: newData };
+        // console.log("data", data);
 
         // Build X scales and axis:
         const x = d3
@@ -50,7 +114,7 @@
           .scaleBand()
           .range([height, 0])
           .domain(myVars)
-          .padding(0.05);
+          .padding(0.025);
         svg
           .append("g")
           .style("font-size", 15)
@@ -61,7 +125,7 @@
         // Build color scale
         const myColor = d3
           .scaleLinear()
-          .domain([0, 100])
+          .domain([minVal - 0.4, maxVal])
           .range(["blue", "red"]);
 
         // create a tooltip
@@ -83,7 +147,9 @@
         };
         const mousemove = function (event, d) {
           tooltip
-            .html(`이곳의 온도는 <br>${d.value} ` + "°C 입니다")
+            .html(
+              `이곳의 온도는 <br>${d.value} ` + `°C 입니다<br>센서: ${d.name}`
+            )
             .style("position", "fixed")
             .style("left", event.x + "px")
             .style("top", event.y + 20 + "px");
